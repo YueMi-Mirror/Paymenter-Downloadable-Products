@@ -4,7 +4,7 @@ namespace Paymenter\Extensions\Servers\DownloadableProducts;
 
 use App\Classes\Extension\Server;
 use App\Models\Service;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Paymenter\Extensions\Servers\DownloadableProducts\Models\DownloadLog;
 
@@ -18,8 +18,6 @@ class DownloadableProducts extends Server
         url: 'https://host4you.cloud',
         icon: 'https://paymenter.org/logo-dark.svg'
     )]
-
-
     public function boot()
     {
         require __DIR__ . '/routes.php';
@@ -46,13 +44,23 @@ class DownloadableProducts extends Server
     {
         return [
             [
-                'name' => 'file_upload',
-                'label' => 'File Upload',
-                'type' => 'file',
-                'description' => 'Upload the file for this product.',
-                'required' => true,
-                'disk' => 'local',
-                'preserve_filenames' => true,
+                'name' => 'storage_disk',
+                'label' => 'Storage Disk',
+                'type' => 'select',
+                'description' => 'Which filesystem disk to store and serve files from.',
+                'options' => [
+                    'local' => 'Local',
+                    's3' => 'S3',
+                    'public' => 'Public',
+                ],
+                'default' => 'local',
+            ],
+            [
+                'name' => 'directory_subfolder',
+                'label' => 'Directory Subfolder',
+                'type' => 'text',
+                'description' => 'Optional subfolder inside DownloadableProducts (e.g. "premium" → DownloadableProducts/premium).',
+                'default' => '',
             ],
             [
                 'name' => 'download_limit',
@@ -68,7 +76,24 @@ class DownloadableProducts extends Server
                 'description' => 'Number of days after purchase the download is available. Leave empty or 0 for no expiry.',
                 'default' => 0,
             ],
+            [
+                'name' => 'file_upload',
+                'label' => 'File Upload',
+                'type' => 'file',
+                'description' => 'Upload the file for this product.',
+                'required' => true,
+                'disk' => $values['storage_disk'] ?? 'local',
+                'directory' => rtrim('DownloadableProducts/' . trim($values['directory_subfolder'] ?? ''), '/'),
+                'preserve_filenames' => true,
+            ],
         ];
+    }
+
+    private function getDisk(array $settings): \Illuminate\Contracts\Filesystem\Filesystem
+    {
+        $disk = $settings['storage_disk'] ?? 'local';
+
+        return Storage::disk($disk);
     }
 
     public function createServer(Service $service, $settings, $properties)
@@ -85,7 +110,7 @@ class DownloadableProducts extends Server
     {
         return [
             ['type' => 'button', 'label' => 'Download', 'function' => 'download'],
-            ['type' => 'view', 'name' => 'Download', 'label' => 'Download File']
+            ['type' => 'view', 'name' => 'Download', 'label' => 'Download File'],
         ];
     }
 
@@ -94,9 +119,10 @@ class DownloadableProducts extends Server
         $settingsArray = is_object($settings) ? (array) $settings : $settings;
 
         if (!empty($settingsArray['file_upload'])) {
-            $filePath = storage_path('app/' . $settingsArray['file_upload']);
-            if (file_exists($filePath)) {
-                $settingsArray['file_checksum'] = hash_file('sha256', $filePath);
+            $filePath = $settingsArray['file_upload'];
+            $disk = $this->getDisk($settingsArray);
+            if ($disk->exists($filePath)) {
+                $settingsArray['file_checksum'] = hash('sha256', $disk->get($filePath));
             }
         }
 
@@ -106,14 +132,23 @@ class DownloadableProducts extends Server
         ]);
     }
 
-    public function download(Service $service, $settings, $properties)
+    public function download(Service $service, $settings = null, $properties = null)
     {
+        // When called via route, $settings is null — load from service's product
+        if ($settings === null) {
+            $settings = $service->product?->settings ?? [];
+            if (is_object($settings)) {
+                $settings = (array) $settings;
+            }
+        }
+
         $fileUpload = $settings['file_upload'] ?? null;
-        $downloadLimit = (int)($settings['download_limit'] ?? 0);
-        $expiryDays = (int)($settings['download_expiry'] ?? 0);
+        $downloadLimit = (int) ($settings['download_limit'] ?? 0);
+        $expiryDays = (int) ($settings['download_expiry'] ?? 0);
 
         if (!$fileUpload) {
             session()->flash('error', 'File upload is not set for this product.');
+
             return redirect()->back();
         }
 
@@ -121,18 +156,22 @@ class DownloadableProducts extends Server
             $expiryDate = $service->created_at->addDays($expiryDays);
             if (now()->greaterThan($expiryDate)) {
                 session()->flash('error', 'Download period has expired for this product.');
+
                 return redirect()->back();
             }
         }
 
         if ($downloadLimit > 0 && $service->download_count >= $downloadLimit) {
             session()->flash('error', 'Download limit reached for this product.');
+
             return redirect()->back();
         }
 
-        $filePath = storage_path('app/' . $fileUpload);
-        if (!file_exists($filePath)) {
+        $disk = $this->getDisk($settings);
+
+        if (!$disk->exists($fileUpload)) {
             session()->flash('error', 'File not found.');
+
             return redirect()->back();
         }
 
@@ -145,6 +184,8 @@ class DownloadableProducts extends Server
             'ip_address' => request()->ip(),
         ]);
 
-        return response()->download($filePath, basename($filePath), ['Content-Type' => 'application/octet-stream']);
+        return $disk->download($fileUpload, basename($fileUpload), [
+            'Content-Type' => 'application/octet-stream',
+        ]);
     }
 }
