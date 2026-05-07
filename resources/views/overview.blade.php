@@ -3,8 +3,6 @@
     $expiryDate = $expiryDays > 0 ? $service->created_at->addDays($expiryDays) : null;
 @endphp
 
-<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
-
 <div class="bg-background-secondary border border-neutral p-6 rounded-lg mt-2">
     <h1 class="text-2xl font-semibold mb-4">Download Info</h1>
 
@@ -61,7 +59,7 @@
 <div class="bg-background-secondary border border-neutral p-6 rounded-lg mt-4">
     <div class="flex items-center gap-3 mb-6">
         <div class="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center">
-            <i class="ri-history-line text-xl text-blue-500"></i>
+            <i class="fas fa-history text-xl text-blue-500"></i>
         </div>
         <div>
             <h2 class="text-xl font-semibold">Available Versions</h2>
@@ -91,7 +89,7 @@
                     <td class="py-4 px-4 text-sm text-base/60">
                         @if($version->release_notes)
                             <div class="flex items-center gap-2">
-                                <i class="ri-information-line text-blue-500/50"></i>
+                                <i class="fas fa-info-circle text-blue-500/50"></i>
                                 <span class="italic">{{ Str::limit($version->release_notes, 100) }}</span>
                             </div>
                         @else
@@ -101,7 +99,7 @@
                     <td class="py-4 px-4 text-right">
                         <a href="{{ route('service.download', ['service' => $service->id, 'version' => $version->id]) }}" 
                            class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-all text-xs font-bold shadow-lg shadow-blue-600/30 hover:-translate-y-0.5 active:translate-y-0">
-                            <i class="ri-download-cloud-2-line"></i>
+                            <i class="fas fa-cloud-download-alt"></i>
                             Download
                         </a>
                     </td>
