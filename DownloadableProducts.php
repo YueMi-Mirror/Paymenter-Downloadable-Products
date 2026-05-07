@@ -73,6 +73,7 @@ class DownloadableProducts extends Server
     {
         return [
             ['type' => 'button', 'label' => 'Download Latest', 'function' => 'download'],
+            ['type' => 'view', 'name' => 'overview', 'label' => 'Download Info'],
         ];
     }
 
