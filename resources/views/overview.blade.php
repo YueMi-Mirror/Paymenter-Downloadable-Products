@@ -52,9 +52,45 @@
                 </div>
             </div>
             @endif
-        </div>
+</div>
+
+@if($versions->count() > 0)
+<div class="bg-background-secondary border border-neutral p-6 rounded-lg mt-4">
+    <h2 class="text-xl font-semibold mb-4">Available Versions</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="border-b border-neutral">
+                    <th class="py-2 px-4">Version</th>
+                    <th class="py-2 px-4">Release Date</th>
+                    <th class="py-2 px-4">Release Notes</th>
+                    <th class="py-2 px-4 text-right">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($versions as $version)
+                <tr class="border-b border-neutral/50">
+                    <td class="py-3 px-4 font-semibold">{{ $version->version }}</td>
+                    <td class="py-3 px-4 text-base/50">{{ $version->created_at->format('M d, Y') }}</td>
+                    <td class="py-3 px-4 text-sm text-base/70">
+                        @if($version->release_notes)
+                            {{ Str::limit($version->release_notes, 100) }}
+                        @else
+                            -
+                        @endif
+                    </td>
+                    <td class="py-3 px-4 text-right">
+                        <a href="{{ route('service.download', ['service' => $service->id, 'version' => $version->id]) }}" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-1 rounded transition text-sm">
+                            Download
+                        </a>
+                    </td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
     </div>
 </div>
+@endif
 
 @if($expiryDate)
 <script>

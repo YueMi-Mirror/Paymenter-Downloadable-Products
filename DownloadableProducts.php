@@ -7,6 +7,7 @@ use App\Models\Service;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\View;
 use Paymenter\Extensions\Servers\DownloadableProducts\Models\DownloadLog;
+use Paymenter\Extensions\Servers\DownloadableProducts\Models\DownloadVersion;
 
 class DownloadableProducts extends Server
 {
@@ -44,47 +45,9 @@ class DownloadableProducts extends Server
     {
         return [
             [
-                'name' => 'storage_disk',
-                'label' => 'Storage Disk',
-                'type' => 'select',
-                'description' => 'Which filesystem disk to store and serve files from.',
-                'options' => [
-                    'local' => 'Local',
-                    's3' => 'S3',
-                    'public' => 'Public',
-                ],
-                'default' => 'local',
-            ],
-            [
-                'name' => 'directory_subfolder',
-                'label' => 'Directory Subfolder',
-                'type' => 'text',
-                'description' => 'Optional subfolder inside DownloadableProducts (e.g. "premium" → DownloadableProducts/premium).',
-                'default' => '',
-            ],
-            [
-                'name' => 'download_limit',
-                'label' => 'Download Limit',
-                'type' => 'number',
-                'description' => 'Maximum number of times the customer can download this file. Leave empty or 0 for unlimited.',
-                'default' => 0,
-            ],
-            [
-                'name' => 'download_expiry',
-                'label' => 'Download Expiry (days)',
-                'type' => 'number',
-                'description' => 'Number of days after purchase the download is available. Leave empty or 0 for no expiry.',
-                'default' => 0,
-            ],
-            [
-                'name' => 'file_upload',
-                'label' => 'File Upload',
-                'type' => 'file',
-                'description' => 'Upload the file for this product.',
-                'required' => true,
-                'disk' => $values['storage_disk'] ?? 'local',
-                'directory' => rtrim('DownloadableProducts/' . trim($values['directory_subfolder'] ?? ''), '/'),
-                'preserve_filenames' => true,
+                'name' => 'Notice',
+                'type' => 'placeholder',
+                'label' => 'Files and versions are managed in the "Versions" admin area.',
             ],
         ];
     }
@@ -126,28 +89,48 @@ class DownloadableProducts extends Server
             }
         }
 
+        $versions = DownloadVersion::where('product_id', $service->product_id)->latest()->get();
+
         return view('downloadableproducts::overview', [
             'service' => $service,
             'settings' => $settingsArray,
+            'versions' => $versions,
         ]);
     }
 
-    public function download(Service $service, $settings = null, $properties = null)
+    public function download(Service $service, $settings = null, $properties = null, $versionId = null)
     {
-        // When called via route, $settings is null — load from service's product
-        if ($settings === null) {
+        if ($settings === null || is_string($settings) || is_numeric($settings)) {
+            if (is_string($settings) || is_numeric($settings)) {
+                $versionId = $settings;
+            }
             $settings = $service->product?->settings ?? [];
             if (is_object($settings)) {
                 $settings = (array) $settings;
             }
         }
 
-        $fileUpload = $settings['file_upload'] ?? null;
-        $downloadLimit = (int) ($settings['download_limit'] ?? 0);
-        $expiryDays = (int) ($settings['download_expiry'] ?? 0);
+        $version = null;
+        if ($versionId) {
+            $version = DownloadVersion::where('product_id', $service->product_id)->find($versionId);
+        } else {
+            $version = DownloadVersion::where('product_id', $service->product_id)->latest()->first();
+        }
+
+        if ($version) {
+            $fileUpload = $version->file_path;
+            $downloadLimit = (int) $version->download_limit;
+            $expiryDays = (int) $version->download_expiry;
+            $diskName = $version->storage_disk;
+        } else {
+            $fileUpload = $settings['file_upload'] ?? null;
+            $downloadLimit = (int) ($settings['download_limit'] ?? 0);
+            $expiryDays = (int) ($settings['download_expiry'] ?? 0);
+            $diskName = $settings['storage_disk'] ?? 'local';
+        }
 
         if (!$fileUpload) {
-            session()->flash('error', 'File upload is not set for this product.');
+            session()->flash('error', 'File not found for this product.');
 
             return redirect()->back();
         }
@@ -155,22 +138,22 @@ class DownloadableProducts extends Server
         if ($expiryDays > 0) {
             $expiryDate = $service->created_at->addDays($expiryDays);
             if (now()->greaterThan($expiryDate)) {
-                session()->flash('error', 'Download period has expired for this product.');
+                session()->flash('error', 'Download period has expired.');
 
                 return redirect()->back();
             }
         }
 
         if ($downloadLimit > 0 && $service->download_count >= $downloadLimit) {
-            session()->flash('error', 'Download limit reached for this product.');
+            session()->flash('error', 'Download limit reached.');
 
             return redirect()->back();
         }
 
-        $disk = $this->getDisk($settings);
+        $disk = Storage::disk($diskName);
 
         if (!$disk->exists($fileUpload)) {
-            session()->flash('error', 'File not found.');
+            session()->flash('error', 'File not found on storage.');
 
             return redirect()->back();
         }
