@@ -57,41 +57,49 @@
 
 @if($versions->count() > 0)
 <div class="bg-background-secondary border border-neutral p-6 rounded-lg mt-4">
-    <div class="flex items-center gap-2 mb-6">
-        <i class="ri-history-line text-xl text-blue-500"></i>
-        <h2 class="text-xl font-semibold">Available Versions</h2>
+    <div class="flex items-center gap-3 mb-6">
+        <div class="w-10 h-10 rounded-full bg-blue-600/10 flex items-center justify-center">
+            <i class="ri-history-line text-xl text-blue-500"></i>
+        </div>
+        <div>
+            <h2 class="text-xl font-semibold">Available Versions</h2>
+            <p class="text-xs text-base/40">Download previous releases and updates</p>
+        </div>
     </div>
     
     <div class="overflow-x-auto">
         <table class="w-full text-left">
             <thead>
-                <tr class="border-b border-neutral/50 text-base/40 text-xs uppercase tracking-wider">
-                    <th class="py-3 px-4 font-bold">Version</th>
-                    <th class="py-3 px-4 font-bold">Release Date</th>
-                    <th class="py-3 px-4 font-bold">Release Notes</th>
-                    <th class="py-3 px-4 font-bold text-right">Action</th>
+                <tr class="border-b border-neutral/50 text-base/40 text-[10px] uppercase font-bold tracking-[0.1em]">
+                    <th class="py-3 px-4">Version</th>
+                    <th class="py-3 px-4">Release Date</th>
+                    <th class="py-3 px-4">Release Notes</th>
+                    <th class="py-3 px-4 text-right">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach($versions as $version)
-                <tr class="border-b border-neutral/30 hover:bg-neutral/5 transition-colors group">
+                <tr class="border-b border-neutral/20 hover:bg-neutral/5 transition-colors group">
                     <td class="py-4 px-4">
-                        <span class="bg-blue-600/20 text-blue-400 px-2 py-1 rounded text-xs font-bold border border-blue-600/30">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-blue-600 text-white shadow-sm shadow-blue-600/20">
                             {{ $version->version }}
                         </span>
                     </td>
-                    <td class="py-4 px-4 text-sm text-base/50">{{ $version->created_at->format('M d, Y') }}</td>
-                    <td class="py-4 px-4 text-sm text-base/60 italic">
+                    <td class="py-4 px-4 text-sm text-base/50 font-medium">{{ $version->created_at->format('M d, Y') }}</td>
+                    <td class="py-4 px-4 text-sm text-base/60">
                         @if($version->release_notes)
-                            {{ Str::limit($version->release_notes, 100) }}
+                            <div class="flex items-center gap-2">
+                                <i class="ri-information-line text-blue-500/50"></i>
+                                <span class="italic">{{ Str::limit($version->release_notes, 100) }}</span>
+                            </div>
                         @else
-                            <span class="text-base/20">No release notes</span>
+                            <span class="text-base/20 italic">No release notes provided</span>
                         @endif
                     </td>
                     <td class="py-4 px-4 text-right">
                         <a href="{{ route('service.download', ['service' => $service->id, 'version' => $version->id]) }}" 
-                           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-1.5 rounded-full transition text-sm font-semibold shadow-lg shadow-blue-600/20">
-                            <i class="ri-download-2-line"></i>
+                           class="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg transition-all text-xs font-bold shadow-lg shadow-blue-600/30 hover:-translate-y-0.5 active:translate-y-0">
+                            <i class="ri-download-cloud-2-line"></i>
                             Download
                         </a>
                     </td>
