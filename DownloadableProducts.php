@@ -72,8 +72,7 @@ class DownloadableProducts extends Server
     public function getActions(Service $service, $settings, $properties): array
     {
         return [
-            ['type' => 'button', 'label' => 'Download', 'function' => 'download'],
-            ['type' => 'view', 'name' => 'Download', 'label' => 'Download File'],
+            ['type' => 'button', 'label' => 'Download Latest', 'function' => 'download'],
         ];
     }
 
