@@ -3,6 +3,8 @@
     $expiryDate = $expiryDays > 0 ? $service->created_at->addDays($expiryDays) : null;
 @endphp
 
+<link href="https://cdn.jsdelivr.net/npm/remixicon@4.5.0/fonts/remixicon.css" rel="stylesheet">
+
 <div class="bg-background-secondary border border-neutral p-6 rounded-lg mt-2">
     <h1 class="text-2xl font-semibold mb-4">Download Info</h1>
 
