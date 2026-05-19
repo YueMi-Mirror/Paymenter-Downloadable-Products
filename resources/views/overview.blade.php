@@ -1,5 +1,12 @@
 @php
-    $expiryDays = isset($settings['download_expiry']) ? (int)$settings['download_expiry'] : 0;
+    $latestVersion = $versions->first();
+    if ($latestVersion) {
+        $expiryDays = (int)$latestVersion->download_expiry;
+        $downloadLimit = (int)$latestVersion->download_limit;
+    } else {
+        $expiryDays = isset($settings['download_expiry']) ? (int)$settings['download_expiry'] : 0;
+        $downloadLimit = isset($settings['download_limit']) ? (int)$settings['download_limit'] : 0;
+    }
     $expiryDate = $expiryDays > 0 ? $service->created_at->addDays($expiryDays) : null;
 @endphp
 
@@ -11,7 +18,7 @@
             <div class="flex items-center text-base">
                 <span class="mr-2 font-medium text-base/70">Download Count:</span>
                 <span class="text-base/50 font-semibold">{{ $service->download_count }} /
-                    {{ $settings['download_limit'] > 0 ? $settings['download_limit'] : '∞' }}</span>
+                    {{ $downloadLimit > 0 ? $downloadLimit : '∞' }}</span>
             </div>
 
             @if($expiryDate)
